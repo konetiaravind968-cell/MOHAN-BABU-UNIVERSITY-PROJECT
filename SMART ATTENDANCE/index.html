@@ -1,0 +1,979 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Smart Attendance Management System (SAMS) - DBMS Mini Project</title>
+  
+  <!-- Tailwind CSS CDN -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <!-- Chart.js for Attendance Analytics -->
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <!-- QRCode.js for Dynamic QR Code Generation -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
+  <!-- jsPDF & AutoTable for Reports PDF Generation -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.8.2/jspdf.plugin.autotable.min.js"></script>
+  
+  <!-- Custom Styling -->
+  <link rel="stylesheet" href="assets/css/style.css">
+</head>
+<body class="bg-slate-50 text-slate-900 antialiased min-h-screen flex flex-col">
+
+  <!-- Top Navigation Bar -->
+  <header class="bg-white border-b border-slate-200 sticky top-0 z-30 shadow-sm">
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between">
+      
+      <!-- Brand & Project Title -->
+      <div class="flex items-center space-x-3">
+        <div class="w-10 h-10 rounded-xl gradient-brand flex items-center justify-center text-white font-black text-lg shadow-md">
+          <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z"/></svg>
+        </div>
+        <div>
+          <div class="font-extrabold text-slate-900 text-lg tracking-tight flex items-center gap-2">
+            Smart Attendance Management System
+            <span class="px-2 py-0.5 text-[10px] font-bold rounded bg-indigo-100 text-indigo-700 tracking-wide uppercase">DBMS Project</span>
+          </div>
+          <p class="text-xs text-slate-500 hidden sm:block">Relational Database Management System &bull; 3NF Normalized</p>
+        </div>
+      </div>
+
+      <!-- Right Header Actions & Admin Profile -->
+      <div class="flex items-center space-x-3">
+        
+        <!-- Live SQL Console Shortcut Pill -->
+        <button onclick="switchView('sql-console')" class="hidden md:inline-flex items-center px-3 py-1.5 text-xs font-semibold rounded-lg bg-slate-100 text-slate-700 hover:bg-slate-200 transition-colors">
+          <svg class="w-3.5 h-3.5 mr-1.5 text-indigo-600" fill="currentColor" viewBox="0 0 20 20"><path d="M3 4a1 1 0 011-1h12a1 1 0 011 1v2a1 1 0 01-1 1H4a1 1 0 01-1-1V4zM3 10a1 1 0 011-1h6a1 1 0 011 1v6a1 1 0 01-1 1H4a1 1 0 01-1-1v-6zM14 9a1 1 0 00-1 1v6a1 1 0 001 1h2a1 1 0 001-1v-6a1 1 0 00-1-1h-2z"/></svg>
+          SQL Console
+        </button>
+
+        <!-- Admin Profile Pill -->
+        <div class="flex items-center space-x-2 pl-2 border-l border-slate-200">
+          <div id="nav-user-avatar" class="w-8 h-8 rounded-full bg-indigo-600 text-white font-bold flex items-center justify-center text-xs shadow-inner">
+            A
+          </div>
+          <div class="text-left hidden sm:block">
+            <div id="nav-user-name" class="text-xs font-bold text-slate-800 leading-tight">Prof. Arvind Kumar</div>
+            <div id="nav-user-role" class="text-[10px] font-semibold text-indigo-600 uppercase tracking-wider">SuperAdmin</div>
+          </div>
+          <button onclick="openModal('login-modal')" class="p-1.5 text-slate-400 hover:text-slate-700 rounded-lg hover:bg-slate-100 transition-colors" title="Switch User / Admin Login">
+            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 9l4-4 4 4m0 6l-4 4-4-4"/></svg>
+          </button>
+        </div>
+
+        <!-- Factory Reset Button -->
+        <button onclick="handleFactoryReset()" class="p-2 text-slate-400 hover:text-rose-600 rounded-lg hover:bg-rose-50 transition-colors" title="Reset Demo Database">
+          <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"/></svg>
+        </button>
+
+      </div>
+    </div>
+  </header>
+
+  <!-- Main Layout -->
+  <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6 w-full flex-grow flex flex-col md:flex-row gap-6">
+    
+    <!-- Sidebar Navigation -->
+    <aside class="w-full md:w-64 flex-shrink-0">
+      <div class="glass-panel rounded-2xl p-3 shadow-sm sticky top-24 space-y-1">
+        
+        <div class="px-3 py-2 text-[11px] font-bold text-slate-400 uppercase tracking-wider">
+          Core Operations
+        </div>
+
+        <button class="nav-tab active w-full flex items-center space-x-3 px-3 py-2.5 rounded-xl text-sm font-semibold transition-all" data-view="dashboard">
+          <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2V6zM14 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2V6zM4 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2v-2zM14 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2v-2z"/></svg>
+          <span>Dashboard</span>
+        </button>
+
+        <button class="nav-tab w-full flex items-center space-x-3 px-3 py-2.5 rounded-xl text-sm font-semibold text-slate-600 hover:bg-slate-100 transition-all" data-view="smart-qr">
+          <svg class="w-4 h-4 text-emerald-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v1m6 11h2m-6 0h-2v4m0-11v3m0 0h.01M12 12h4.01M16 20h4M4 12h4m12 0h.01M5 8h2a1 1 0 001-1V5a1 1 0 00-1-1H5a1 1 0 00-1 1v2a1 1 0 001 1zm12 0h2a1 1 0 001-1V5a1 1 0 00-1-1h-2a1 1 0 00-1 1v2a1 1 0 001 1zM5 20h2a1 1 0 001-1v-2a1 1 0 00-1-1H5a1 1 0 00-1 1v2a1 1 0 001 1z"/></svg>
+          <span>Smart QR Scanner</span>
+        </button>
+
+        <button class="nav-tab w-full flex items-center space-x-3 px-3 py-2.5 rounded-xl text-sm font-semibold text-slate-600 hover:bg-slate-100 transition-all" data-view="mark-attendance">
+          <svg class="w-4 h-4 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-6 9l2 2 4-4"/></svg>
+          <span>Mark Grid Mode</span>
+        </button>
+
+        <div class="px-3 pt-4 pb-2 text-[11px] font-bold text-slate-400 uppercase tracking-wider">
+          Academic Management
+        </div>
+
+        <button class="nav-tab w-full flex items-center space-x-3 px-3 py-2.5 rounded-xl text-sm font-semibold text-slate-600 hover:bg-slate-100 transition-all" data-view="students">
+          <svg class="w-4 h-4 text-indigo-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a4 4 0 11-8 0 4 4 0 018 0z"/></svg>
+          <span>Students Directory</span>
+        </button>
+
+        <button class="nav-tab w-full flex items-center space-x-3 px-3 py-2.5 rounded-xl text-sm font-semibold text-slate-600 hover:bg-slate-100 transition-all" data-view="defaulters">
+          <svg class="w-4 h-4 text-rose-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"/></svg>
+          <span>Defaulters (&lt; 75%)</span>
+        </button>
+
+        <button class="nav-tab w-full flex items-center space-x-3 px-3 py-2.5 rounded-xl text-sm font-semibold text-slate-600 hover:bg-slate-100 transition-all" data-view="courses">
+          <svg class="w-4 h-4 text-amber-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253"/></svg>
+          <span>Courses & Faculty</span>
+        </button>
+
+        <button class="nav-tab w-full flex items-center space-x-3 px-3 py-2.5 rounded-xl text-sm font-semibold text-slate-600 hover:bg-slate-100 transition-all" data-view="reports">
+          <svg class="w-4 h-4 text-emerald-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/></svg>
+          <span>Reports &amp; PDF</span>
+        </button>
+
+        <div class="px-3 pt-4 pb-2 text-[11px] font-bold text-slate-400 uppercase tracking-wider">
+          DBMS Evaluation
+        </div>
+
+        <button class="nav-tab w-full flex items-center space-x-3 px-3 py-2.5 rounded-xl text-sm font-semibold text-slate-600 hover:bg-slate-100 transition-all" data-view="sql-console">
+          <svg class="w-4 h-4 text-cyan-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 9l3 3-3 3m5 0h3M5 20h14a2 2 0 002-2V6a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"/></svg>
+          <span>SQL Query Console</span>
+        </button>
+
+        <button class="nav-tab w-full flex items-center space-x-3 px-3 py-2.5 rounded-xl text-sm font-semibold text-slate-600 hover:bg-slate-100 transition-all" data-view="audit">
+          <svg class="w-4 h-4 text-purple-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/></svg>
+          <span>Trigger Audit Logs</span>
+        </button>
+
+      </div>
+    </aside>
+
+    <!-- Content Area -->
+    <main class="flex-grow">
+      
+      <!-- ==================================================================== -->
+      <!-- VIEW 1: DASHBOARD -->
+      <!-- ==================================================================== -->
+      <div id="view-dashboard" class="app-view space-y-6">
+        
+        <!-- Welcome Banner -->
+        <div class="gradient-brand rounded-3xl p-6 sm:p-8 text-white shadow-lg relative overflow-hidden">
+          <div class="relative z-10">
+            <span class="px-3 py-1 bg-white/20 backdrop-blur-md rounded-full text-xs font-semibold tracking-wide uppercase">
+              DBMS Mini Project Demonstration
+            </span>
+            <h2 class="text-2xl sm:text-3xl font-extrabold mt-3">Smart Attendance Admin Portal</h2>
+            <p class="text-indigo-100 text-sm max-w-2xl mt-1">
+              Automated smart verification, batch session attendance recording, defaulter tracking (< 75%), relational schema integrity, and live SQL querying.
+            </p>
+            <div class="mt-4 flex flex-wrap gap-2">
+              <button onclick="switchView('smart-qr')" class="px-4 py-2 bg-white text-indigo-700 font-bold rounded-xl text-xs hover:bg-indigo-50 shadow transition-all">
+                Launch Smart QR Session &rarr;
+              </button>
+              <button onclick="switchView('sql-console')" class="px-4 py-2 bg-indigo-900/40 text-white font-semibold rounded-xl text-xs hover:bg-indigo-900/60 border border-white/20 transition-all">
+                Inspect Database Queries
+              </button>
+            </div>
+          </div>
+        </div>
+
+        <!-- Metric Stat Cards -->
+        <div class="grid grid-cols-2 lg:grid-cols-4 gap-4">
+          <div class="glass-panel p-5 rounded-2xl shadow-sm border border-slate-200">
+            <div class="flex items-center justify-between">
+              <span class="text-xs font-bold text-slate-500 uppercase">Enrolled Students</span>
+              <div class="p-2 rounded-xl bg-indigo-50 text-indigo-600">
+                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z"/></svg>
+              </div>
+            </div>
+            <div id="stat-total-students" class="text-3xl font-black text-slate-900 mt-2">12</div>
+            <div class="text-[11px] font-semibold text-emerald-600 mt-1 flex items-center">
+              Active in current semester
+            </div>
+          </div>
+
+          <div class="glass-panel p-5 rounded-2xl shadow-sm border border-slate-200">
+            <div class="flex items-center justify-between">
+              <span class="text-xs font-bold text-slate-500 uppercase">Overall Turnout</span>
+              <div class="p-2 rounded-xl bg-emerald-50 text-emerald-600">
+                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+              </div>
+            </div>
+            <div id="stat-overall-turnout" class="text-3xl font-black text-slate-900 mt-2">84.2%</div>
+            <div class="text-[11px] font-semibold text-indigo-600 mt-1">Campus aggregate rate</div>
+          </div>
+
+          <div class="glass-panel p-5 rounded-2xl shadow-sm border border-slate-200">
+            <div class="flex items-center justify-between">
+              <span class="text-xs font-bold text-slate-500 uppercase">Total Sessions</span>
+              <div class="p-2 rounded-xl bg-blue-50 text-blue-600">
+                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"/></svg>
+              </div>
+            </div>
+            <div id="stat-total-sessions" class="text-3xl font-black text-slate-900 mt-2">8</div>
+            <div class="text-[11px] font-semibold text-slate-500 mt-1">Conducted lectures & labs</div>
+          </div>
+
+          <div class="glass-panel p-5 rounded-2xl shadow-sm border border-slate-200">
+            <div class="flex items-center justify-between">
+              <span class="text-xs font-bold text-slate-500 uppercase">Debarment Risk</span>
+              <div class="p-2 rounded-xl bg-rose-50 text-rose-600">
+                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"/></svg>
+              </div>
+            </div>
+            <div id="stat-total-defaulters" class="text-3xl font-black text-rose-600 mt-2">3</div>
+            <div class="text-[11px] font-semibold text-rose-500 mt-1">Attendance &lt; 75% threshold</div>
+          </div>
+        </div>
+
+        <!-- Charts Grid -->
+        <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+          <div class="glass-panel p-5 rounded-2xl shadow-sm border border-slate-200">
+            <h3 class="font-bold text-slate-800 text-sm mb-4 flex items-center justify-between">
+              <span>Daily Attendance Turnout Trend</span>
+              <span class="text-xs font-normal text-slate-500">Last 5 Sessions</span>
+            </h3>
+            <div class="h-64 relative">
+              <canvas id="attendanceTrendChart"></canvas>
+            </div>
+          </div>
+
+          <div class="glass-panel p-5 rounded-2xl shadow-sm border border-slate-200">
+            <h3 class="font-bold text-slate-800 text-sm mb-4 flex items-center justify-between">
+              <span>Department Attendance Performance</span>
+              <span class="text-xs font-normal text-slate-500">Benchmark: 75%</span>
+            </h3>
+            <div class="h-64 relative">
+              <canvas id="deptAttendanceChart"></canvas>
+            </div>
+          </div>
+        </div>
+
+      </div>
+
+      <!-- ==================================================================== -->
+      <!-- VIEW 2: SMART QR ATTENDANCE -->
+      <!-- ==================================================================== -->
+      <div id="view-smart-qr" class="app-view hidden space-y-6">
+        <div class="glass-panel p-6 rounded-3xl shadow-sm border border-slate-200">
+          <div class="flex flex-col md:flex-row md:items-center justify-between gap-4 border-b border-slate-100 pb-5">
+            <div>
+              <h2 class="text-xl font-bold text-slate-900">Dynamic Smart QR Code Attendance</h2>
+              <p class="text-xs text-slate-500 mt-0.5">Generates auto-expiring QR session tokens with instant scan verification.</p>
+            </div>
+            <div class="flex items-center space-x-3">
+              <label for="qr-session-select" class="text-xs font-semibold text-slate-600">Select Lecture:</label>
+              <select id="qr-session-select" class="bg-white border border-slate-300 rounded-xl px-3 py-1.5 text-xs font-medium focus:ring-2 focus:ring-indigo-500"></select>
+            </div>
+          </div>
+
+          <div class="grid grid-cols-1 md:grid-cols-2 gap-8 pt-6 items-center">
+            
+            <!-- Dynamic QR Code Card -->
+            <div class="flex flex-col items-center justify-center p-6 bg-slate-50 rounded-2xl border border-slate-200 relative overflow-hidden">
+              <div class="scanner-laser"></div>
+              
+              <div class="bg-white p-4 rounded-2xl shadow-md border border-slate-200" id="qrcode-canvas-container">
+                <!-- QR Code generated here -->
+              </div>
+
+              <div class="mt-4 flex items-center space-x-2 text-xs font-semibold text-slate-600">
+                <span>Rotating in:</span>
+                <span id="qr-countdown-text" class="px-2 py-0.5 rounded bg-indigo-100 text-indigo-700 font-mono font-bold">60s</span>
+              </div>
+              <p class="text-[11px] text-slate-400 mt-2 text-center max-w-xs">
+                Students scan this QR code via phone or smart campus ID card to verify physical classroom presence.
+              </p>
+            </div>
+
+            <!-- Instant Scanner / Token Verification Simulation -->
+            <div class="space-y-4">
+              <h3 class="font-bold text-slate-800 text-sm">Interactive Student Check-In Simulator</h3>
+              <p class="text-xs text-slate-500">
+                Simulate a student scanning the QR code or tapping their RFID badge:
+              </p>
+
+              <div class="flex space-x-2">
+                <input type="text" id="qr-token-input" placeholder="Enter Roll No (e.g. CS2201) or Token" class="flex-grow px-3.5 py-2 text-xs border border-slate-300 rounded-xl focus:ring-2 focus:ring-indigo-500">
+                <button id="qr-token-submit" class="px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white font-bold text-xs rounded-xl shadow transition-colors">
+                  Verify & Mark
+                </button>
+              </div>
+
+              <!-- Quick Demo Student Chips -->
+              <div>
+                <label class="text-[11px] font-bold text-slate-400 uppercase tracking-wider block mb-2">1-Click Test Students:</label>
+                <div class="flex flex-wrap gap-1.5">
+                  <button type="button" class="quick-student-chip px-2.5 py-1 text-xs font-mono bg-white hover:bg-indigo-50 border border-slate-200 rounded-lg text-slate-700" data-roll="CS2201">Aarav (CS2201)</button>
+                  <button type="button" class="quick-student-chip px-2.5 py-1 text-xs font-mono bg-white hover:bg-indigo-50 border border-slate-200 rounded-lg text-slate-700" data-roll="CS2202">Diya (CS2202)</button>
+                  <button type="button" class="quick-student-chip px-2.5 py-1 text-xs font-mono bg-white hover:bg-indigo-50 border border-slate-200 rounded-lg text-slate-700" data-roll="CS2208">Pooja (CS2208)</button>
+                  <button type="button" class="quick-student-chip px-2.5 py-1 text-xs font-mono bg-white hover:bg-indigo-50 border border-slate-200 rounded-lg text-slate-700" data-roll="CS2210">Sneha (CS2210)</button>
+                </div>
+              </div>
+
+              <!-- Feedback Result Container -->
+              <div id="qr-scan-feedback" class="mt-4"></div>
+
+            </div>
+
+          </div>
+        </div>
+      </div>
+
+      <!-- ==================================================================== -->
+      <!-- VIEW 3: MARK ATTENDANCE GRID -->
+      <!-- ==================================================================== -->
+      <div id="view-mark-attendance" class="app-view hidden space-y-6">
+        <div class="glass-panel p-6 rounded-3xl shadow-sm border border-slate-200">
+          <div class="flex flex-col md:flex-row md:items-center justify-between gap-4 border-b border-slate-100 pb-5">
+            <div>
+              <h2 class="text-xl font-bold text-slate-900">Attendance Register (Grid View)</h2>
+              <p class="text-xs text-slate-500 mt-0.5">Faculty manual entry & status adjustment with trigger audit logging.</p>
+            </div>
+            
+            <div class="flex flex-wrap items-center gap-2">
+              <select id="grid-session-select" class="bg-white border border-slate-300 rounded-xl px-3 py-1.5 text-xs font-medium focus:ring-2 focus:ring-indigo-500"></select>
+              
+              <button id="btn-mark-all-present" class="px-3 py-1.5 bg-emerald-50 text-emerald-700 border border-emerald-200 hover:bg-emerald-100 font-bold text-xs rounded-xl transition-colors">
+                All Present
+              </button>
+              <button id="btn-mark-all-absent" class="px-3 py-1.5 bg-rose-50 text-rose-700 border border-rose-200 hover:bg-rose-100 font-bold text-xs rounded-xl transition-colors">
+                All Absent
+              </button>
+              <button id="btn-save-grid-attendance" class="px-4 py-1.5 bg-indigo-600 hover:bg-indigo-700 text-white font-bold text-xs rounded-xl shadow transition-colors">
+                Save & Sync DBMS
+              </button>
+            </div>
+          </div>
+
+          <!-- Live Session Counts -->
+          <div class="flex items-center space-x-6 py-3 text-xs font-semibold text-slate-600 border-b border-slate-100">
+            <div>Present: <span id="grid-count-present" class="text-emerald-600 font-bold font-mono">0</span></div>
+            <div>Absent: <span id="grid-count-absent" class="text-rose-600 font-bold font-mono">0</span></div>
+            <div>Late: <span id="grid-count-late" class="text-amber-600 font-bold font-mono">0</span></div>
+          </div>
+
+          <!-- Attendance Table -->
+          <div class="overflow-x-auto mt-4">
+            <table class="w-full text-left border-collapse">
+              <thead>
+                <tr class="border-b border-slate-200 text-slate-400 uppercase text-[11px] font-bold tracking-wider">
+                  <th class="py-3 px-4">Roll No</th>
+                  <th class="py-3 px-4">Student Name</th>
+                  <th class="py-3 px-4">Section</th>
+                  <th class="py-3 px-4">Attendance Status</th>
+                  <th class="py-3 px-4">Verified By</th>
+                </tr>
+              </thead>
+              <tbody id="attendance-grid-body">
+                <!-- Dynamically populated -->
+              </tbody>
+            </table>
+          </div>
+
+        </div>
+      </div>
+
+      <!-- ==================================================================== -->
+      <!-- VIEW 4: STUDENTS DIRECTORY -->
+      <!-- ==================================================================== -->
+      <div id="view-students" class="app-view hidden space-y-6">
+        <div class="glass-panel p-6 rounded-3xl shadow-sm border border-slate-200">
+          <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-slate-100 pb-5">
+            <div>
+              <h2 class="text-xl font-bold text-slate-900">Enrolled Students Directory</h2>
+              <p class="text-xs text-slate-500 mt-0.5">Manage students, roll numbers, credentials, and aggregate attendance.</p>
+            </div>
+            <div class="flex items-center space-x-2">
+              <input type="text" id="students-search-input" placeholder="Search name, roll no, dept..." class="px-3.5 py-1.5 text-xs border border-slate-300 rounded-xl focus:ring-2 focus:ring-indigo-500">
+              <button onclick="generateAttendanceSummaryPDF()" class="px-3 py-1.5 bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs rounded-xl shadow transition-colors flex items-center" title="Export Institutional PDF Report">
+                <svg class="w-4 h-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/></svg>
+                Export PDF
+              </button>
+              <button onclick="openModal('add-student-modal')" class="px-3.5 py-1.5 bg-indigo-600 hover:bg-indigo-700 text-white font-bold text-xs rounded-xl shadow transition-colors flex items-center">
+                <svg class="w-4 h-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/></svg>
+                Add Student
+              </button>
+            </div>
+          </div>
+
+          <div class="overflow-x-auto mt-4">
+            <table class="w-full text-left border-collapse">
+              <thead>
+                <tr class="border-b border-slate-200 text-slate-400 uppercase text-[11px] font-bold tracking-wider">
+                  <th class="py-3 px-4">Roll Number</th>
+                  <th class="py-3 px-4">Name & Email</th>
+                  <th class="py-3 px-4">Department</th>
+                  <th class="py-3 px-4">Classes</th>
+                  <th class="py-3 px-4">Attendance %</th>
+                  <th class="py-3 px-4">Exam Eligibility</th>
+                  <th class="py-3 px-4 text-right">Actions</th>
+                </tr>
+              </thead>
+              <tbody id="students-table-body">
+                <!-- Students table populated via app.js -->
+              </tbody>
+            </table>
+          </div>
+
+        </div>
+      </div>
+
+      <!-- ==================================================================== -->
+      <!-- VIEW 5: CRITICAL DEFAULTERS -->
+      <!-- ==================================================================== -->
+      <div id="view-defaulters" class="app-view hidden space-y-6">
+        <div class="glass-panel p-6 rounded-3xl shadow-sm border border-slate-200">
+          <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-slate-100 pb-5">
+            <div>
+              <div class="flex items-center space-x-2">
+                <h2 class="text-xl font-bold text-slate-900">Attendance Defaulters List</h2>
+                <span class="px-2.5 py-0.5 rounded-full text-xs font-bold bg-rose-100 text-rose-700">&lt; 75% Rule</span>
+              </div>
+              <p class="text-xs text-slate-500 mt-0.5">Students disqualified from university semester examinations without condonation.</p>
+            </div>
+            <div class="flex items-center space-x-2">
+              <button onclick="generateDefaultersNoticePDF()" class="px-4 py-2 bg-rose-600 hover:bg-rose-700 text-white font-bold text-xs rounded-xl shadow transition-colors flex items-center">
+                <svg class="w-4 h-4 mr-1.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/></svg>
+                Export PDF Notice
+              </button>
+              <button id="btn-export-defaulters-csv" class="px-3 py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold text-xs rounded-xl border border-slate-200 transition-colors flex items-center">
+                CSV
+              </button>
+            </div>
+          </div>
+
+          <div class="overflow-x-auto mt-4">
+            <table class="w-full text-left border-collapse">
+              <thead>
+                <tr class="border-b border-slate-200 text-slate-400 uppercase text-[11px] font-bold tracking-wider">
+                  <th class="py-3 px-4">Roll Number</th>
+                  <th class="py-3 px-4">Student Name</th>
+                  <th class="py-3 px-4">Dept & Semester</th>
+                  <th class="py-3 px-4">Turnout</th>
+                  <th class="py-3 px-4">Percentage</th>
+                  <th class="py-3 px-4">University Status</th>
+                </tr>
+              </thead>
+              <tbody id="defaulters-table-body">
+                <!-- Defaulters list -->
+              </tbody>
+            </table>
+          </div>
+
+        </div>
+      </div>
+
+      <!-- ==================================================================== -->
+      <!-- VIEW 6: COURSES & FACULTY (WITH FULL CRUD) -->
+      <!-- ==================================================================== -->
+      <div id="view-courses" class="app-view hidden space-y-6">
+        <div class="glass-panel p-6 rounded-3xl shadow-sm border border-slate-200">
+          <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-slate-100 pb-5">
+            <div>
+              <h2 class="text-xl font-bold text-slate-900">Faculty & Academic Courses Management</h2>
+              <p class="text-xs text-slate-500 mt-0.5">Manage university professors, employee codes, designations, and department subjects.</p>
+            </div>
+            <div class="flex items-center space-x-2">
+              <button onclick="openModal('add-course-modal')" class="px-4 py-2 bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs rounded-xl shadow transition-colors flex items-center">
+                <svg class="w-4 h-4 mr-1.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/></svg>
+                Add Subject
+              </button>
+              <button onclick="openModal('add-faculty-modal')" class="px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white font-bold text-xs rounded-xl shadow transition-colors flex items-center">
+                <svg class="w-4 h-4 mr-1.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M18 9v3m0 0v3m0-3h3m-3 0h-3m-2-5a4 4 0 11-8 0 4 4 0 018 0zM3 20a6 6 0 0112 0v1H3v-1z"/></svg>
+                Add Faculty
+              </button>
+            </div>
+          </div>
+
+          <!-- Sub-Tab Switcher -->
+          <div class="flex space-x-2 mt-4 border-b border-slate-200 pb-2">
+            <button id="subtab-faculty-btn" onclick="toggleFacultyCourseSubtab('faculty')" class="px-4 py-1.5 text-xs font-bold rounded-lg bg-indigo-600 text-white transition-colors">
+              Faculty Directory (<span id="faculty-badge-count">3</span>)
+            </button>
+            <button id="subtab-courses-btn" onclick="toggleFacultyCourseSubtab('courses')" class="px-4 py-1.5 text-xs font-bold rounded-lg bg-slate-100 text-slate-600 hover:bg-slate-200 transition-colors">
+              Courses / Subjects (<span id="courses-badge-count">5</span>)
+            </button>
+          </div>
+
+          <!-- Section 1: Faculty Directory Table (Add & Delete) -->
+          <div id="subtab-faculty-container" class="mt-4">
+            <div class="overflow-x-auto">
+              <table class="w-full text-left border-collapse">
+                <thead>
+                  <tr class="border-b border-slate-200 text-slate-400 uppercase text-[11px] font-bold tracking-wider">
+                    <th class="py-3 px-4">Employee Code</th>
+                    <th class="py-3 px-4">Faculty Name & Email</th>
+                    <th class="py-3 px-4">Department</th>
+                    <th class="py-3 px-4">Designation</th>
+                    <th class="py-3 px-4">Contact Phone</th>
+                    <th class="py-3 px-4 text-right">Actions</th>
+                  </tr>
+                </thead>
+                <tbody id="faculty-table-body">
+                  <!-- Populated via app.js -->
+                </tbody>
+              </table>
+            </div>
+          </div>
+
+          <!-- Section 2: Courses Catalog Cards -->
+          <div id="subtab-courses-container" class="hidden mt-4 space-y-4">
+            <div class="flex justify-between items-center bg-slate-50 p-3 rounded-xl border border-slate-200">
+              <span class="text-xs font-semibold text-slate-600">Active Department Subjects &amp; Minimum Attendance Criteria</span>
+              <button onclick="openModal('add-course-modal')" class="px-3 py-1.5 bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold rounded-lg shadow transition-colors flex items-center">
+                <svg class="w-3.5 h-3.5 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/></svg>
+                + Add Subject
+              </button>
+            </div>
+            <div id="courses-cards-container" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
+              <!-- Course cards injected via app.js -->
+            </div>
+          </div>
+
+        </div>
+      </div>
+
+      <!-- ==================================================================== -->
+      <!-- VIEW: REPORTS & PDF GENERATOR -->
+      <!-- ==================================================================== -->
+      <div id="view-reports" class="app-view hidden space-y-6">
+        <div class="glass-panel p-6 rounded-3xl shadow-sm border border-slate-200">
+          <div class="border-b border-slate-100 pb-4">
+            <h2 class="text-xl font-bold text-slate-900 flex items-center gap-2">
+              Official University Reports &amp; PDF Export Center
+              <span class="px-2 py-0.5 text-xs font-semibold rounded bg-emerald-100 text-emerald-800">jsPDF Engine</span>
+            </h2>
+            <p class="text-xs text-slate-500 mt-0.5">Generate and download official PDF certificates, debarment notices, and semester roll-call sheets.</p>
+          </div>
+
+          <div class="grid grid-cols-1 md:grid-cols-3 gap-5 mt-6">
+            
+            <!-- Report Card 1: Attendance Summary PDF -->
+            <div class="bg-white p-5 rounded-2xl border border-slate-200 shadow-sm flex flex-col justify-between hover:shadow-md transition-shadow">
+              <div>
+                <div class="w-10 h-10 rounded-xl bg-indigo-50 text-indigo-600 flex items-center justify-center mb-3">
+                  <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 17v-2m3 2v-4m3 4v-6m2 10H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/></svg>
+                </div>
+                <h3 class="font-bold text-slate-900 text-base mb-1">Institutional Attendance Summary</h3>
+                <p class="text-xs text-slate-500">Comprehensive table with all enrolled students, total classes, attended counts, percentage, and exam eligibility status with signature blocks.</p>
+              </div>
+              <button onclick="generateAttendanceSummaryPDF()" class="mt-4 w-full py-2.5 bg-indigo-600 hover:bg-indigo-700 text-white font-bold text-xs rounded-xl shadow transition-colors flex items-center justify-center">
+                <svg class="w-4 h-4 mr-1.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"/></svg>
+                Download Summary PDF
+              </button>
+            </div>
+
+            <!-- Report Card 2: Defaulters Notice PDF -->
+            <div class="bg-white p-5 rounded-2xl border border-rose-200 shadow-sm flex flex-col justify-between hover:shadow-md transition-shadow bg-rose-50/20">
+              <div>
+                <div class="w-10 h-10 rounded-xl bg-rose-100 text-rose-600 flex items-center justify-center mb-3">
+                  <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"/></svg>
+                </div>
+                <h3 class="font-bold text-slate-900 text-base mb-1">Critical Defaulters Notice (&lt; 75%)</h3>
+                <p class="text-xs text-slate-500">Official notice of attendance shortage issued under academic regulation clause 4.2 for students facing exam detention and parent alert.</p>
+              </div>
+              <button onclick="generateDefaultersNoticePDF()" class="mt-4 w-full py-2.5 bg-rose-600 hover:bg-rose-700 text-white font-bold text-xs rounded-xl shadow transition-colors flex items-center justify-center">
+                <svg class="w-4 h-4 mr-1.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"/></svg>
+                Download Defaulter Notice PDF
+              </button>
+            </div>
+
+            <!-- Report Card 3: Session Attendance Sheet PDF -->
+            <div class="bg-white p-5 rounded-2xl border border-slate-200 shadow-sm flex flex-col justify-between hover:shadow-md transition-shadow">
+              <div>
+                <div class="w-10 h-10 rounded-xl bg-emerald-50 text-emerald-600 flex items-center justify-center mb-3">
+                  <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2"/></svg>
+                </div>
+                <h3 class="font-bold text-slate-900 text-base mb-1">Lecture Roll-Call Sheet</h3>
+                <p class="text-xs text-slate-500 mb-2">Export physical attendance roll sheet for any specific lecture session.</p>
+                <select id="report-session-select" class="w-full text-xs border border-slate-300 rounded-lg p-2 bg-slate-50">
+                  <!-- Populated dynamically -->
+                </select>
+              </div>
+              <button onclick="generateCurrentSessionPDF()" class="mt-4 w-full py-2.5 bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs rounded-xl shadow transition-colors flex items-center justify-center">
+                <svg class="w-4 h-4 mr-1.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"/></svg>
+                Download Session PDF
+              </button>
+            </div>
+
+          </div>
+        </div>
+      </div>
+
+      <!-- ==================================================================== -->
+      <!-- VIEW 7: INTERACTIVE SQL CONSOLE (DBMS SHOWCASE) -->
+      <!-- ==================================================================== -->
+      <div id="view-sql-console" class="app-view hidden space-y-6">
+        <div class="glass-panel p-6 rounded-3xl shadow-sm border border-slate-200">
+          <div class="flex items-center justify-between border-b border-slate-100 pb-4">
+            <div>
+              <h2 class="text-xl font-bold text-slate-900 flex items-center gap-2">
+                Interactive DBMS SQL Console
+                <span class="px-2 py-0.5 text-xs font-mono rounded bg-cyan-100 text-cyan-800 font-semibold">Live Engine</span>
+              </h2>
+              <p class="text-xs text-slate-500 mt-0.5">Test real SQL queries against relational tables & analytical views directly in the browser.</p>
+            </div>
+          </div>
+
+          <!-- Predefined Query Chips for Viva -->
+          <div class="pt-4">
+            <span class="text-[11px] font-bold text-slate-400 uppercase tracking-wider block mb-2">Predefined Viva Queries:</span>
+            <div class="flex flex-wrap gap-2">
+              <button class="preset-query-btn px-2.5 py-1 text-xs font-mono bg-slate-100 hover:bg-indigo-50 hover:text-indigo-600 rounded-lg border border-slate-200 transition-colors" data-sql="SELECT * FROM v_student_attendance_summary">
+                SELECT * FROM v_student_attendance_summary
+              </button>
+              <button class="preset-query-btn px-2.5 py-1 text-xs font-mono bg-slate-100 hover:bg-rose-50 hover:text-rose-600 rounded-lg border border-slate-200 transition-colors" data-sql="SELECT * FROM v_critical_defaulters">
+                SELECT * FROM v_critical_defaulters
+              </button>
+              <button class="preset-query-btn px-2.5 py-1 text-xs font-mono bg-slate-100 hover:bg-indigo-50 hover:text-indigo-600 rounded-lg border border-slate-200 transition-colors" data-sql="SELECT * FROM students WHERE dept_code = 'CSE'">
+                SELECT * FROM students WHERE dept_code = 'CSE'
+              </button>
+              <button class="preset-query-btn px-2.5 py-1 text-xs font-mono bg-slate-100 hover:bg-indigo-50 hover:text-indigo-600 rounded-lg border border-slate-200 transition-colors" data-sql="SELECT * FROM attendance_audit_logs">
+                SELECT * FROM attendance_audit_logs
+              </button>
+            </div>
+          </div>
+
+          <!-- SQL Query Editor -->
+          <div class="mt-4">
+            <textarea id="sql-query-input" rows="3" class="w-full font-mono text-xs p-3.5 bg-slate-900 text-emerald-400 rounded-xl border border-slate-700 focus:outline-none focus:ring-2 focus:ring-indigo-500 shadow-inner" placeholder="Type your SQL query here (e.g., SELECT * FROM v_critical_defaulters;)">SELECT * FROM v_student_attendance_summary;</textarea>
+            
+            <div class="mt-2 flex justify-between items-center">
+              <span class="text-xs text-slate-400">Press Run to execute against relational store</span>
+              <button id="btn-execute-sql" class="px-5 py-2 bg-indigo-600 hover:bg-indigo-700 text-white font-bold text-xs rounded-xl shadow transition-colors flex items-center">
+                <svg class="w-4 h-4 mr-1.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M14.752 11.168l-3.197-2.132A1 1 0 0010 9.87v4.263a1 1 0 001.555.832l3.197-2.132a1 1 0 000-1.664z"/><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+                Execute Query
+              </button>
+            </div>
+          </div>
+
+          <!-- Results Table -->
+          <div id="sql-results-container" class="mt-6"></div>
+
+        </div>
+      </div>
+
+      <!-- ==================================================================== -->
+      <!-- VIEW 8: AUDIT LOGS -->
+      <!-- ==================================================================== -->
+      <div id="view-audit" class="app-view hidden space-y-6">
+        <div class="glass-panel p-6 rounded-3xl shadow-sm border border-slate-200">
+          <div class="border-b border-slate-100 pb-4">
+            <h2 class="text-xl font-bold text-slate-900">Database Trigger Audit Logs</h2>
+            <p class="text-xs text-slate-500 mt-0.5">Captures automated audit trail records generated when an attendance entry is altered.</p>
+          </div>
+
+          <div class="overflow-x-auto mt-4">
+            <table class="w-full text-left border-collapse">
+              <thead>
+                <tr class="border-b border-slate-200 text-slate-400 uppercase text-[11px] font-bold tracking-wider">
+                  <th class="py-3 px-4">Audit ID</th>
+                  <th class="py-3 px-4">Action</th>
+                  <th class="py-3 px-4">Student</th>
+                  <th class="py-3 px-4">Change Track</th>
+                  <th class="py-3 px-4">Modified By</th>
+                  <th class="py-3 px-4">Timestamp</th>
+                  <th class="py-3 px-4">Audit Reason</th>
+                </tr>
+              </thead>
+              <tbody id="audit-table-body">
+                <!-- Populated via app.js -->
+              </tbody>
+            </table>
+          </div>
+
+        </div>
+      </div>
+
+    </main>
+  </div>
+
+  <!-- ==================================================================== -->
+  <!-- MODAL: ADMIN LOGIN -->
+  <!-- ==================================================================== -->
+  <div id="login-modal" class="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-50 flex items-center justify-center p-4 hidden">
+    <div class="bg-white rounded-3xl max-w-md w-full p-6 shadow-2xl border border-slate-100 relative">
+      <button onclick="closeModal('login-modal')" class="absolute top-5 right-5 text-slate-400 hover:text-slate-600">
+        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg>
+      </button>
+
+      <div class="text-center mb-6">
+        <div class="w-12 h-12 rounded-2xl gradient-brand mx-auto flex items-center justify-center text-white mb-3 shadow">
+          <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z"/></svg>
+        </div>
+        <h3 class="text-xl font-bold text-slate-900">Admin Portal Authentication</h3>
+        <p class="text-xs text-slate-500 mt-1">Sign in with authorized administrative or faculty credentials</p>
+      </div>
+
+      <form id="admin-login-form" class="space-y-4">
+        <div>
+          <label class="block text-xs font-bold text-slate-700 uppercase mb-1">Email / Username</label>
+          <input type="text" id="login-email" value="admin@campus.edu" required class="w-full px-3.5 py-2.5 text-xs border border-slate-300 rounded-xl focus:ring-2 focus:ring-indigo-500">
+        </div>
+        <div>
+          <label class="block text-xs font-bold text-slate-700 uppercase mb-1">Password</label>
+          <input type="password" id="login-password" value="admin123" required class="w-full px-3.5 py-2.5 text-xs border border-slate-300 rounded-xl focus:ring-2 focus:ring-indigo-500">
+        </div>
+        <button type="submit" class="w-full py-2.5 bg-indigo-600 hover:bg-indigo-700 text-white font-bold text-xs rounded-xl shadow transition-colors">
+          Log In to Admin Dashboard
+        </button>
+      </form>
+
+      <!-- Quick 1-Click Demo Accounts -->
+      <div class="mt-6 pt-5 border-t border-slate-100 text-center">
+        <span class="text-[11px] font-bold text-slate-400 uppercase tracking-wider block mb-2.5">1-Click Evaluator Accounts:</span>
+        <div class="grid grid-cols-2 gap-2 text-xs">
+          <button type="button" onclick="quickDemoLogin('admin@campus.edu', 'Dean / SuperAdmin')" class="p-2 border border-slate-200 rounded-xl hover:bg-indigo-50 text-slate-700 font-semibold transition-colors">
+            SuperAdmin
+          </button>
+          <button type="button" onclick="quickDemoLogin('cse_admin@campus.edu', 'CSE Admin')" class="p-2 border border-slate-200 rounded-xl hover:bg-indigo-50 text-slate-700 font-semibold transition-colors">
+            CSE Admin
+          </button>
+        </div>
+      </div>
+
+    </div>
+  </div>
+
+  <!-- ==================================================================== -->
+  <!-- MODAL: ADD STUDENT -->
+  <!-- ==================================================================== -->
+  <div id="add-student-modal" class="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-50 flex items-center justify-center p-4 hidden">
+    <div class="bg-white rounded-3xl max-w-lg w-full p-6 shadow-2xl border border-slate-100 relative">
+      <button onclick="closeModal('add-student-modal')" class="absolute top-5 right-5 text-slate-400 hover:text-slate-600">
+        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg>
+      </button>
+
+      <h3 class="text-xl font-bold text-slate-900 mb-1">Enroll New Student</h3>
+      <p class="text-xs text-slate-500 mb-5">Inserts record into 'students' table with auto-assigned QR and RFID token.</p>
+
+      <form id="add-student-form" class="space-y-3">
+        <div class="grid grid-cols-2 gap-3">
+          <div>
+            <label class="block text-[11px] font-bold text-slate-600 uppercase mb-1">Roll Number *</label>
+            <input type="text" id="new-roll-no" placeholder="e.g. CS2215" required class="w-full px-3 py-2 text-xs border border-slate-300 rounded-xl">
+          </div>
+          <div>
+            <label class="block text-[11px] font-bold text-slate-600 uppercase mb-1">Full Name *</label>
+            <input type="text" id="new-full-name" placeholder="Student name" required class="w-full px-3 py-2 text-xs border border-slate-300 rounded-xl">
+          </div>
+        </div>
+
+        <div class="grid grid-cols-2 gap-3">
+          <div>
+            <label class="block text-[11px] font-bold text-slate-600 uppercase mb-1">Email *</label>
+            <input type="email" id="new-email" placeholder="student@campus.edu" required class="w-full px-3 py-2 text-xs border border-slate-300 rounded-xl">
+          </div>
+          <div>
+            <label class="block text-[11px] font-bold text-slate-600 uppercase mb-1">Phone</label>
+            <input type="text" id="new-phone" placeholder="+91 9876543210" class="w-full px-3 py-2 text-xs border border-slate-300 rounded-xl">
+          </div>
+        </div>
+
+        <div class="grid grid-cols-3 gap-3">
+          <div>
+            <label class="block text-[11px] font-bold text-slate-600 uppercase mb-1">Department</label>
+            <select id="new-dept-id" class="w-full px-3 py-2 text-xs border border-slate-300 rounded-xl">
+              <option value="1">CSE</option>
+              <option value="2">ECE</option>
+              <option value="3">IT</option>
+              <option value="4">ME</option>
+            </select>
+          </div>
+          <div>
+            <label class="block text-[11px] font-bold text-slate-600 uppercase mb-1">Semester</label>
+            <select id="new-semester" class="w-full px-3 py-2 text-xs border border-slate-300 rounded-xl">
+              <option value="5">Sem 5</option>
+              <option value="6">Sem 6</option>
+            </select>
+          </div>
+          <div>
+            <label class="block text-[11px] font-bold text-slate-600 uppercase mb-1">Section</label>
+            <input type="text" id="new-section" value="A" class="w-full px-3 py-2 text-xs border border-slate-300 rounded-xl">
+          </div>
+        </div>
+
+        <div class="pt-4 flex justify-end space-x-2">
+          <button type="button" onclick="closeModal('add-student-modal')" class="px-4 py-2 border border-slate-200 text-slate-600 rounded-xl text-xs font-semibold">
+            Cancel
+          </button>
+          <button type="submit" class="px-5 py-2 bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl text-xs font-bold shadow">
+            Insert to Database
+          </button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- ==================================================================== -->
+  <!-- MODAL: ADD FACULTY MEMBER -->
+  <!-- ==================================================================== -->
+  <div id="add-faculty-modal" class="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-50 flex items-center justify-center p-4 hidden">
+    <div class="bg-white rounded-3xl max-w-lg w-full p-6 shadow-2xl border border-slate-100 relative">
+      <button onclick="closeModal('add-faculty-modal')" class="absolute top-5 right-5 text-slate-400 hover:text-slate-600">
+        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg>
+      </button>
+
+      <h3 class="text-xl font-bold text-slate-900 mb-1">Add Faculty Member</h3>
+      <p class="text-xs text-slate-500 mb-5">Inserts record into 'faculty' DBMS table with assigned department and code.</p>
+
+      <form id="add-faculty-form" class="space-y-3">
+        <div class="grid grid-cols-2 gap-3">
+          <div>
+            <label class="block text-[11px] font-bold text-slate-600 uppercase mb-1">Employee Code *</label>
+            <input type="text" id="new-fac-code" placeholder="e.g. FAC-CSE-004" required class="w-full px-3 py-2 text-xs border border-slate-300 rounded-xl">
+          </div>
+          <div>
+            <label class="block text-[11px] font-bold text-slate-600 uppercase mb-1">Full Name *</label>
+            <input type="text" id="new-fac-name" placeholder="Dr. / Prof. Name" required class="w-full px-3 py-2 text-xs border border-slate-300 rounded-xl">
+          </div>
+        </div>
+
+        <div class="grid grid-cols-2 gap-3">
+          <div>
+            <label class="block text-[11px] font-bold text-slate-600 uppercase mb-1">Official Email *</label>
+            <input type="email" id="new-fac-email" placeholder="faculty@campus.edu" required class="w-full px-3 py-2 text-xs border border-slate-300 rounded-xl">
+          </div>
+          <div>
+            <label class="block text-[11px] font-bold text-slate-600 uppercase mb-1">Phone Number</label>
+            <input type="text" id="new-fac-phone" placeholder="+91 9876543220" class="w-full px-3 py-2 text-xs border border-slate-300 rounded-xl">
+          </div>
+        </div>
+
+        <div class="grid grid-cols-2 gap-3">
+          <div>
+            <label class="block text-[11px] font-bold text-slate-600 uppercase mb-1">Department</label>
+            <select id="new-fac-dept" class="w-full px-3 py-2 text-xs border border-slate-300 rounded-xl">
+              <option value="1">CSE (Computer Science)</option>
+              <option value="2">ECE (Electronics)</option>
+              <option value="3">IT (Information Tech)</option>
+              <option value="4">ME (Mechanical)</option>
+            </select>
+          </div>
+          <div>
+            <label class="block text-[11px] font-bold text-slate-600 uppercase mb-1">Designation</label>
+            <select id="new-fac-designation" class="w-full px-3 py-2 text-xs border border-slate-300 rounded-xl">
+              <option value="Assistant Professor">Assistant Professor</option>
+              <option value="Associate Professor">Associate Professor</option>
+              <option value="Professor">Professor</option>
+              <option value="Professor & HOD">Professor & HOD</option>
+              <option value="Adjunct Lecturer">Adjunct Lecturer</option>
+            </select>
+          </div>
+        </div>
+
+        <div class="pt-4 flex justify-end space-x-2">
+          <button type="button" onclick="closeModal('add-faculty-modal')" class="px-4 py-2 border border-slate-200 text-slate-600 rounded-xl text-xs font-semibold">
+            Cancel
+          </button>
+          <button type="submit" class="px-5 py-2 bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl text-xs font-bold shadow">
+            Save Faculty to DBMS
+          </button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- ==================================================================== -->
+  <!-- MODAL: ADD SUBJECT / COURSE -->
+  <!-- ==================================================================== -->
+  <div id="add-course-modal" class="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-50 flex items-center justify-center p-4 hidden">
+    <div class="bg-white rounded-3xl max-w-lg w-full p-6 shadow-2xl border border-slate-100 relative">
+      <button onclick="closeModal('add-course-modal')" class="absolute top-5 right-5 text-slate-400 hover:text-slate-600">
+        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg>
+      </button>
+
+      <h3 class="text-xl font-bold text-slate-900 mb-1">Add Academic Subject</h3>
+      <p class="text-xs text-slate-500 mb-5">Inserts record into 'courses' table with syllabus credit hours and attendance criteria.</p>
+
+      <form id="add-course-form" class="space-y-3">
+        <div class="grid grid-cols-2 gap-3">
+          <div>
+            <label class="block text-[11px] font-bold text-slate-600 uppercase mb-1">Subject Code *</label>
+            <input type="text" id="new-course-code" placeholder="e.g. CS505" required class="w-full px-3 py-2 text-xs border border-slate-300 rounded-xl">
+          </div>
+          <div>
+            <label class="block text-[11px] font-bold text-slate-600 uppercase mb-1">Subject Name *</label>
+            <input type="text" id="new-course-name" placeholder="e.g. Cloud Computing" required class="w-full px-3 py-2 text-xs border border-slate-300 rounded-xl">
+          </div>
+        </div>
+
+        <div class="grid grid-cols-2 gap-3">
+          <div>
+            <label class="block text-[11px] font-bold text-slate-600 uppercase mb-1">Department</label>
+            <select id="new-course-dept" class="w-full px-3 py-2 text-xs border border-slate-300 rounded-xl">
+              <option value="1">CSE (Computer Science)</option>
+              <option value="2">ECE (Electronics)</option>
+              <option value="3">IT (Information Tech)</option>
+              <option value="4">ME (Mechanical)</option>
+            </select>
+          </div>
+          <div>
+            <label class="block text-[11px] font-bold text-slate-600 uppercase mb-1">Semester</label>
+            <select id="new-course-semester" class="w-full px-3 py-2 text-xs border border-slate-300 rounded-xl">
+              <option value="1">Semester 1</option>
+              <option value="2">Semester 2</option>
+              <option value="3">Semester 3</option>
+              <option value="4">Semester 4</option>
+              <option value="5" selected>Semester 5</option>
+              <option value="6">Semester 6</option>
+              <option value="7">Semester 7</option>
+              <option value="8">Semester 8</option>
+            </select>
+          </div>
+        </div>
+
+        <div class="grid grid-cols-3 gap-3">
+          <div>
+            <label class="block text-[11px] font-bold text-slate-600 uppercase mb-1">Credits</label>
+            <input type="number" id="new-course-credits" value="4" min="1" max="6" class="w-full px-3 py-2 text-xs border border-slate-300 rounded-xl">
+          </div>
+          <div>
+            <label class="block text-[11px] font-bold text-slate-600 uppercase mb-1">Total Hours</label>
+            <input type="number" id="new-course-hours" value="45" min="10" max="90" class="w-full px-3 py-2 text-xs border border-slate-300 rounded-xl">
+          </div>
+          <div>
+            <label class="block text-[11px] font-bold text-slate-600 uppercase mb-1">Min Attendance %</label>
+            <input type="number" id="new-course-min" value="75.0" step="0.5" min="50" max="100" class="w-full px-3 py-2 text-xs border border-slate-300 rounded-xl">
+          </div>
+        </div>
+
+        <div class="pt-4 flex justify-end space-x-2">
+          <button type="button" onclick="closeModal('add-course-modal')" class="px-4 py-2 border border-slate-200 text-slate-600 rounded-xl text-xs font-semibold">
+            Cancel
+          </button>
+          <button type="submit" class="px-5 py-2 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl text-xs font-bold shadow">
+            Save Subject to DBMS
+          </button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- ==================================================================== -->
+  <!-- MODAL: STUDENT PROFILE CARD -->
+  <!-- ==================================================================== -->
+  <div id="student-profile-modal" class="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-50 flex items-center justify-center p-4 hidden">
+    <div class="bg-white rounded-3xl max-w-lg w-full p-6 shadow-2xl border border-slate-100 relative">
+      <button onclick="closeModal('student-profile-modal')" class="absolute top-5 right-5 text-slate-400 hover:text-slate-600">
+        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg>
+      </button>
+      <div id="student-profile-content">
+        <!-- Injected dynamically -->
+      </div>
+    </div>
+  </div>
+
+  <!-- Footer -->
+  <footer class="bg-white border-t border-slate-200 py-4 mt-auto">
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 flex flex-col sm:flex-row items-center justify-between text-xs text-slate-500 gap-2">
+      <div>
+        <strong>DBMS Mini Project:</strong> Smart Attendance Management System (SAMS)
+      </div>
+      <div class="flex items-center space-x-4">
+        <span>MySQL 8.0 DDL & DML</span>
+        <span>&bull;</span>
+        <span>Relational Views &amp; Triggers</span>
+        <span>&bull;</span>
+        <span>Admin Authentication</span>
+      </div>
+    </div>
+  </footer>
+
+  <!-- Scripts -->
+  <script src="assets/js/mock-data.js"></script>
+  <script src="assets/js/db-service.js"></script>
+  <script src="assets/js/app.js"></script>
+
+</body>
+</html>
